@@ -11,3 +11,7 @@
 # Python cache
 __pycache__/
 *.pyc
+
+# Local helper artifacts
+.gitignore.proposed
+vat_ca3
