@@ -1,0 +1,3 @@
+date,counterparty,amount_ttc,attachment_path,vat_rate_percent,vat_amount,vat_base_ht,deductible_oui_non,comment
+2026-01-15,VENDOR A,966.13,/tmp/a.pdf,20.0,161.13,805.0,Oui,TVA deductible retenue
+2026-01-21,TAX AGENCY,129.0,,0.0,0.0,129.0,Non,Hors TVA
