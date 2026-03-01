@@ -1,0 +1,4 @@
+date,counterparty,amount_ttc,attachment_path,vat_rate_percent,vat_amount,vat_base_ht,collectee_oui_non,comment
+2026-01-09,CLIENT ALPHA,25080.0,/tmp/invoice003.pdf,20.0,4180.0,20900.0,Oui,Encaissement client taxable
+2026-01-20,REVERSAL FOOD APP,36.1,,,,,Non,Remboursement annulation
+2026-01-30,REFUND CONTACT,5.72,/tmp/refund.pdf,,,,Non,Remboursement partiel

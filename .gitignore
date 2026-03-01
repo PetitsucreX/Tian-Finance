@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Local business documents and exports (root-level only)
+/Bilan*/
+/URGENT/
+
+# Runtime/generated accounting artifacts
+/data/ca3_ledger.csv
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local helper artifacts
+.gitignore.proposed
+vat_ca3

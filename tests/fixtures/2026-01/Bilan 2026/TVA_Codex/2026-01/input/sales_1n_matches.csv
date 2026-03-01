@@ -1,0 +1,4 @@
+transaction_ref,invoice_id,invoice_ttc,invoice_ht,invoice_vat,vat_rate_percent
+2026-01-09|client alpha|25080.00,INV001,8360.00,6966.67,1393.33,20
+2026-01-09|client alpha|25080.00,INV002,8360.00,6966.67,1393.33,20
+2026-01-09|client alpha|25080.00,INV003,8360.00,6966.66,1393.34,20

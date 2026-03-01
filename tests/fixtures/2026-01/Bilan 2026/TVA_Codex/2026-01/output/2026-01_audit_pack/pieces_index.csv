@@ -1,0 +1,6 @@
+piece_id,type,path,status,note
+INV001,Invoice,/tmp/INV001.pdf,present,
+INV002,Invoice,/tmp/INV002.pdf,present,
+INV003,Invoice,/tmp/INV003.pdf,present,
+CA3_DEC_2025_VISU,Visualisation,/tmp/ca3_dec_2025.pdf,present,Ligne 27 = 521
+CA3_JAN_2026_CERT_DEPOT,Certificat depot,/tmp/accuse.pdf,present,
