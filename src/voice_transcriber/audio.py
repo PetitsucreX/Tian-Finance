@@ -14,6 +14,23 @@ def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
 
 
+def decode_audio_array(path: Path, sampling_rate: int = 16000):
+    """Decode any media file to a 16 kHz mono float32 numpy array via PyAV.
+
+    Uses faster-whisper's PyAV-based decoder, so it works **without** a system
+    ``ffmpeg`` binary installed (handy on Macs without Homebrew).
+    """
+    try:
+        from faster_whisper.audio import decode_audio  # type: ignore
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise RuntimeError(
+            "Audio decoding needs PyAV via 'faster-whisper'. Install it with "
+            "`pip install faster-whisper`."
+        ) from exc
+    return decode_audio(str(path), sampling_rate=sampling_rate)
+
+
+
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 

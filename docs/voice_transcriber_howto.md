@@ -15,14 +15,18 @@
 ## 一、安装（只需一次）
 
 ```bash
-brew install ffmpeg                     # 抽音轨用
 cd ~/Tian-Finance
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[transcriber]"
 ```
 
-> 首次用某个模型会自动下载（`large-v3` 约 1.5 GB）后缓存。Apple Silicon 用 CPU 即可，
-> 建议 `--compute-type int8` 提速。
+- **不需要 Homebrew / 系统 ffmpeg**：音频解码走 PyAV（随依赖安装）。
+- 在 **Apple 芯片**上会自动安装并使用 **MLX 引擎（走 GPU）**：比 CPU 快约 7 倍、
+  不吃满 CPU、风扇安静、省电。Intel Mac 则回退到 faster-whisper（CPU）。
+- 首次用某个模型会自动下载（`large-v3` 约 1.5 GB）后缓存。
+
+> 实测：一段 11 分钟录音，faster-whisper(CPU) 约 13.5 分钟、CPU 占用 ~200%；
+> MLX(GPU) 约 1.9 分钟、CPU 均值 ~26%。质量同为 large-v3，基本一致。
 
 ## 二、语音备忘录在 Mac 上吗？（先确认同步）
 
@@ -108,9 +112,10 @@ bash ~/Tian-Finance/scripts/transcribe_voice_memos.sh
 | `--source photos\|folder\|voicememos` | 数据来源 | `photos` |
 | `--folder PATH` | 文件夹模式扫描目录 | — |
 | `--recordings-dir PATH` | 自定义语音备忘录目录 | 自动探测 |
+| `--engine auto\|mlx\|faster-whisper` | 引擎，`auto` 在 Apple 芯片自动用 MLX(GPU) | `auto` |
 | `--language fr\|zh\|en\|auto` | 指定语言，`auto` 自动识别 | `auto` |
-| `--model` | Whisper 模型 | `large-v3` |
-| `--compute-type int8` | CPU 提速（精度略降） | `auto` |
+| `--model` | 模型（如 `large-v3`、`turbo`） | `large-v3` |
+| `--compute-type int8` | faster-whisper 的 CPU 提速（精度略降） | `auto` |
 | `--skip-existing` | 跳过已转写的，反复触发不重复 | 关 |
 | `--prompt "专有名词,人名"` | 提示词，提升术语准确度 | — |
 | `--format txt md srt vtt json` | 输出格式（可多选） | `txt md` |
@@ -129,8 +134,8 @@ bash ~/Tian-Finance/scripts/transcribe_voice_memos.sh
 src/voice_transcriber/
   voicememos.py  # 读「语音备忘录」iCloud 目录(+CloudRecordings.db 取标题/日期)
   photos.py      # 从「照片」库(osxphotos)或文件夹发现录音/视频
-  audio.py       # ffprobe 探测、ffmpeg 抽 16kHz 单声道音轨、VAD 语音检测
-  transcribe.py  # faster-whisper 逐字转写（惰性加载模型）
+  audio.py       # PyAV 解码音频(无需系统 ffmpeg)、VAD 语音检测
+  transcribe.py  # 逐字转写：MLX(GPU) / faster-whisper(CPU) 双引擎，自动选择
   formats.py     # 输出 txt / md / srt / vtt / json
   cli.py         # 命令行入口（find / transcribe）
 scripts/

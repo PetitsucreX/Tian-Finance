@@ -325,10 +325,79 @@ def test_main_handles_source_error_cleanly(capsys):
     assert "错误" in capsys.readouterr().err
 
 
-def test_cmd_transcribe_no_ffmpeg(monkeypatch, tmp_path):
-    clip = _touch(tmp_path / "clip.mov")
-    from voice_transcriber import cli
+# --------------------------------------------------------------------------- #
+# Engine selection (MLX / faster-whisper)
+# --------------------------------------------------------------------------- #
+def test_resolve_engine_explicit():
+    from voice_transcriber import transcribe
 
-    monkeypatch.setattr(cli.audio, "ffmpeg_available", lambda: False)
-    args = build_parser().parse_args(["transcribe", str(clip)])
-    assert cmd_transcribe(args) == 2
+    assert transcribe.resolve_engine("mlx") == "mlx"
+    assert transcribe.resolve_engine("faster-whisper") == "faster-whisper"
+
+
+def test_resolve_engine_auto_non_apple(monkeypatch):
+    from voice_transcriber import transcribe
+
+    monkeypatch.setattr(transcribe.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(transcribe.platform, "machine", lambda: "x86_64")
+    assert transcribe.resolve_engine("auto") == "faster-whisper"
+
+
+def test_resolve_engine_auto_apple_silicon(monkeypatch):
+    import sys
+    import types
+
+    from voice_transcriber import transcribe
+
+    monkeypatch.setattr(transcribe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(transcribe.platform, "machine", lambda: "arm64")
+    # Pretend mlx_whisper is importable.
+    monkeypatch.setitem(sys.modules, "mlx_whisper", types.ModuleType("mlx_whisper"))
+    assert transcribe.resolve_engine("auto") == "mlx"
+
+
+def test_mlx_repo_mapping():
+    from voice_transcriber.transcribe import mlx_repo
+
+    assert mlx_repo("large-v3") == "mlx-community/whisper-large-v3-mlx"
+    assert mlx_repo("turbo") == "mlx-community/whisper-large-v3-turbo"
+    # Already a repo path → passthrough.
+    assert mlx_repo("my-org/custom-model") == "my-org/custom-model"
+    # Unknown name → safe default.
+    assert mlx_repo("weird").startswith("mlx-community/")
+
+
+def test_transcriber_mlx_maps_segments(monkeypatch, tmp_path):
+    """Drive the MLX path with a fake mlx_whisper module and fake decoder."""
+    import sys
+    import types
+
+    from voice_transcriber import transcribe
+
+    fake = types.ModuleType("mlx_whisper")
+
+    def fake_transcribe(audio, **kwargs):
+        assert kwargs["path_or_hf_repo"] == "mlx-community/whisper-large-v3-mlx"
+        return {
+            "language": "en",
+            "segments": [
+                {"start": 0.0, "end": 1.0, "text": " Hello world. "},
+                {"start": 1.0, "end": 2.0, "text": "  "},  # blank
+            ],
+        }
+
+    fake.transcribe = fake_transcribe
+    monkeypatch.setitem(sys.modules, "mlx_whisper", fake)
+    monkeypatch.setattr(transcribe, "decode_audio_array", lambda p: [0.0, 0.1])
+
+    t = transcribe.Transcriber(engine="mlx")
+    media = MediaItem(path=tmp_path / "x.m4a", filename="x.m4a", source="voicememos")
+    result = t.transcribe(media)
+    assert result.language == "en"
+    assert result.model == "mlx-community/whisper-large-v3-mlx"
+    assert result.full_text == "Hello world."  # blank segment dropped
+
+
+def test_parser_engine_option():
+    args = build_parser().parse_args(["transcribe", "a.m4a", "--engine", "mlx"])
+    assert args.engine == "mlx"

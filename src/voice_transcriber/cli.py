@@ -57,7 +57,9 @@ def annotate_speech(items: Sequence[MediaItem], detect: bool) -> None:
     """Fill in ``has_audio`` / ``has_speech`` for each item (best effort)."""
     for item in items:
         item.has_audio = audio.has_audio_stream(item.path)
-        if detect and item.has_audio:
+        # Speech detection uses PyAV VAD and works even without a system ffprobe,
+        # so don't gate it on has_audio (which needs ffprobe to be meaningful).
+        if detect:
             item.has_speech, item.speech_seconds = audio.detect_speech(item.path)
 
 
@@ -134,12 +136,9 @@ def cmd_transcribe(args: argparse.Namespace) -> int:
         print("没有可转写的录音/视频。")
         return 1
 
-    if not audio.ffmpeg_available():
-        print("错误：未找到 ffmpeg/ffprobe，请先安装（brew install ffmpeg）。", file=sys.stderr)
-        return 2
-
     transcriber = Transcriber(
         model=args.model,
+        engine=args.engine,
         device=args.device,
         compute_type=args.compute_type,
         beam_size=args.beam_size,
@@ -199,6 +198,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_tx = sub.add_parser("transcribe", help="生成逐字稿")
     add_source_opts(p_tx)
     p_tx.add_argument("inputs", nargs="*", help="直接给定的视频/音频文件路径（可多个）")
+    p_tx.add_argument("--engine", choices=("auto", "mlx", "faster-whisper"),
+                      default="auto",
+                      help="转写引擎：auto 在 Apple 芯片上自动用 MLX(GPU)，否则 faster-whisper")
     p_tx.add_argument("--model", default=DEFAULT_MODEL, help=f"Whisper 模型（默认 {DEFAULT_MODEL}）")
     p_tx.add_argument("--language", default="auto",
                       help="语言代码 fr/zh/en…，默认 auto 自动识别")

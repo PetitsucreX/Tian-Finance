@@ -12,9 +12,12 @@ dependencies = []
 [project.optional-dependencies]
 # Voice/video transcriber extras (macOS). Install with:
 #   pip install -e ".[transcriber]"
+# faster-whisper bundles PyAV, so no system ffmpeg binary is required.
+# mlx-whisper adds the Apple-Silicon GPU backend (installed only on arm64 macOS).
 transcriber = [
     "faster-whisper>=1.0",
     "osxphotos>=0.68",
+    "mlx-whisper>=0.4; platform_system == 'Darwin' and platform_machine == 'arm64'",
 ]
 
 [project.scripts]
