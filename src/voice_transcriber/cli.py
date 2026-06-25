@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from . import audio, photos
+from . import audio, photos, voicememos
 from .formats import FORMATS, render
 from .models import MediaItem
 from .transcribe import DEFAULT_MODEL, Transcriber
@@ -34,6 +34,12 @@ def collect_media(args: argparse.Namespace) -> List[MediaItem]:
             Path(args.folder),
             recursive=not args.no_recursive,
             videos_only=args.videos_only,
+            since=args.since,
+            until=args.until,
+        )
+    elif args.source == "voicememos":
+        items = voicememos.find_voice_memos(
+            recordings_dir=Path(args.recordings_dir) if args.recordings_dir else None,
             since=args.since,
             until=args.until,
         )
@@ -109,6 +115,21 @@ def cmd_transcribe(args: argparse.Namespace) -> int:
         annotate_speech(items, detect=True)
         items = [it for it in items if it.has_speech]
 
+    out_dir = Path(args.output_dir)
+
+    if args.skip_existing:
+        kept = []
+        skipped = 0
+        for it in items:
+            primary = out_dir / f"{Path(it.filename).stem}.{args.format[0]}"
+            if primary.exists():
+                skipped += 1
+            else:
+                kept.append(it)
+        if skipped:
+            print(f"跳过 {skipped} 个已转写的（--skip-existing）。")
+        items = kept
+
     if not items:
         print("没有可转写的录音/视频。")
         return 1
@@ -123,7 +144,6 @@ def cmd_transcribe(args: argparse.Namespace) -> int:
         compute_type=args.compute_type,
         beam_size=args.beam_size,
     )
-    out_dir = Path(args.output_dir)
     fmts = args.format
 
     failures = 0
@@ -155,10 +175,13 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_source_opts(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--source", choices=("photos", "folder"), default="photos",
-                       help="从 macOS 照片库还是普通文件夹查找（默认 photos）")
+        p.add_argument("--source", choices=("photos", "folder", "voicememos"),
+                       default="photos",
+                       help="数据来源：照片库 / 文件夹 / 语音备忘录（默认 photos）")
         p.add_argument("--folder", help="--source folder 时要扫描的目录")
         p.add_argument("--library", help="自定义 Photos 资料库路径（可选）")
+        p.add_argument("--recordings-dir",
+                       help="--source voicememos 时自定义语音备忘录目录（可选）")
         p.add_argument("--no-recursive", action="store_true", help="文件夹模式下不递归子目录")
         p.add_argument("--videos-only", action="store_true", default=True,
                        help="只看视频（默认开启）")
@@ -185,6 +208,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_tx.add_argument("--beam-size", type=int, default=5, help="beam search 宽度（默认 5）")
     p_tx.add_argument("--prompt", help="初始提示词（可写入专有名词以提升准确度）")
     p_tx.add_argument("--output-dir", default="transcripts", help="逐字稿输出目录")
+    p_tx.add_argument("--skip-existing", action="store_true",
+                      help="跳过输出目录里已存在逐字稿的录音（手机定时触发时建议开启）")
     p_tx.add_argument("--format", nargs="+", choices=FORMATS, default=["txt", "md"],
                       help=f"输出格式，可多选：{', '.join(FORMATS)}（默认 txt md）")
     p_tx.set_defaults(func=cmd_transcribe)
@@ -195,7 +220,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (RuntimeError, NotADirectoryError, FileNotFoundError) as exc:
+        print(f"错误：{exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":  # pragma: no cover
