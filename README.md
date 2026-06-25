@@ -2,6 +2,10 @@
 
 This repository now includes a reproducible monthly CA3 workflow with exception-stop controls.
 
+> **语音/视频逐字稿工具**：从 macOS「照片」库或文件夹找出带人声的录音/视频，用本地
+> faster-whisper 转成逐字稿。见 [`docs/voice_transcriber_howto.md`](docs/voice_transcriber_howto.md)。
+> 快速开始：`pip install -e ".[transcriber]"` 然后 `voice-transcriber find --detect-speech`。
+
 ## Command
 
 ```bash

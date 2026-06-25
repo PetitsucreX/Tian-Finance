@@ -9,6 +9,17 @@ description = "Monthly CA3 workflow automation with exception-stop controls"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+# Voice/video transcriber extras (macOS). Install with:
+#   pip install -e ".[transcriber]"
+transcriber = [
+    "faster-whisper>=1.0",
+    "osxphotos>=0.68",
+]
+
+[project.scripts]
+voice-transcriber = "voice_transcriber.cli:main"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
